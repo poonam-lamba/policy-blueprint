@@ -1,0 +1,49 @@
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: gcpstoragelocationconstraintv1
+  annotations:
+    description: Restricts the permitted `locations` for StorageBucket Config Connector resources. Bucket names in the `exemptions` list are exempt. Introduced in ACM v1.6.1.
+spec:
+  crd:
+    spec:
+      names:
+        kind: GCPStorageLocationConstraintV1
+      validation:
+        openAPIV3Schema:
+          properties:
+            exemptions:
+              items:
+                type: string
+              type: array
+            locations:
+              items:
+                type: string
+              type: array
+  targets:
+  - rego: |
+      package gcpstoragelocationconstraintv1
+      allowedLocation(reviewLocation) {
+        locations := input.parameters.locations
+        satisfied := [good |
+          location = locations[_]
+          good = lower(location) == lower(reviewLocation)
+        ]
+        any(satisfied)
+      }
+      exempt(reviewName) {
+        input.parameters.exemptions[_] == reviewName
+      }
+      violation[{"msg": msg}] {
+        bucketName := input.review.object.metadata.name
+        bucketLocation := input.review.object.spec.location
+        not allowedLocation(bucketLocation)
+        not exempt(bucketName)
+        msg := sprintf("Cloud Storage bucket <%v> uses a disallowed location <%v>, allowed locations are %v", [bucketName, bucketLocation, input.parameters.locations])
+      }
+      violation[{"msg": msg}] {
+        not input.parameters.locations
+        bucketName := input.review.object.metadata.name
+        msg := sprintf("No permitted locations for Cloud Storage bucket <%v>", [bucketName])
+      }
+    target: admission.k8s.gatekeeper.sh
