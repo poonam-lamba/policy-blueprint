@@ -1,14 +1,14 @@
 apiVersion: templates.gatekeeper.sh/v1beta1
 kind: ConstraintTemplate
 metadata:
-  name: gcpstoragelocationconstraintv1
+  name: gcpstoragelocationconstraintv2
   annotations:
     description: Restricts the permitted `locations` for StorageBucket Config Connector resources. Bucket names in the `exemptions` list are exempt. Introduced in ACM v1.6.1.
 spec:
   crd:
     spec:
       names:
-        kind: GCPStorageLocationConstraintV1
+        kind: GCPStorageLocationConstraintV2
       validation:
         openAPIV3Schema:
           properties:
@@ -22,7 +22,7 @@ spec:
               type: array
   targets:
   - rego: |
-      package gcpstoragelocationconstraintv1
+      package gcpstoragelocationconstraintv2
       allowedLocation(reviewLocation) {
         locations := input.parameters.locations
         satisfied := [good |
